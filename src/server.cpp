@@ -7,7 +7,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-
+using namespace std;
 int main(int argc, char **argv)
 {
   // Flush after every std::cout / std::cerr
@@ -58,8 +58,14 @@ int main(int argc, char **argv)
 
   std::cout << "Waiting for a client to connect...\n";
 
-  accept(server_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len);
+  int client = accept(server_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len);
   std::cout << "Client connected\n";
+
+  char write_buffer[512] = {0};
+  string s = "HTTP/1.1 200 OK\r\n\r\n";
+
+  strcpy(write_buffer, s.c_str());
+  write(client, write_buffer, strlen(write_buffer));
 
   close(server_fd);
 
