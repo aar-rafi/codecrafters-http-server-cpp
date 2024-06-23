@@ -7,7 +7,24 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <vector>
 using namespace std;
+
+vector<string> string_split(string &s, char delim)
+{
+  vector<string> tokens;
+  size_t start = 0;
+  size_t end = s.find(delim);
+  while (end != string::npos)
+  {
+    tokens.push_back(s.substr(start, end - start));
+    start = end + 1;
+    end = s.find(delim, start);
+  }
+  tokens.push_back(s.substr(start));
+  return tokens;
+}
+
 int main(int argc, char **argv)
 {
   // Flush after every std::cout / std::cerr
@@ -70,23 +87,18 @@ int main(int argc, char **argv)
   }
   cout << "read" << readbytes << " bytes " << read_buffer << endl;
 
-  char temp[50] = {0};
-  for (int i = 0; i < 50; i++)
-  {
-    if (read_buffer[i] == '\r' && read_buffer[i + 1] == '\n')
-    {
-      break;
-    }
-    temp[i] = read_buffer[i];
-  }
-
+  string temp(read_buffer);
+  vector<string> tokens = string_split(temp, '/');
   string s;
-  if (strcmp(temp, "GET / HTTP/1.1"))
+  if (tokens[1] == " HTTP")
+    s = "HTTP/1.1 200 OK\r\n\r\n";
+  else if (tokens[1] == "echo")
   {
-    s = "HTTP/1.1 404 Not Found\r\n\r\n";
+    int len = tokens[2].length() - 5;
+    s = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + to_string(len) + "\r\n\r\n" + tokens[2].substr(0, len);
   }
   else
-    s = "HTTP/1.1 200 OK\r\n\r\n";
+    s = "HTTP/1.1 404 Not Found\r\n\r\n";
 
   char write_buffer[512] = {0};
   strcpy(write_buffer, s.c_str());
