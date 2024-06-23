@@ -61,9 +61,34 @@ int main(int argc, char **argv)
   int client = accept(server_fd, (struct sockaddr *)&client_addr, (socklen_t *)&client_addr_len);
   std::cout << "Client connected\n";
 
-  char write_buffer[512] = {0};
-  string s = "HTTP/1.1 200 OK\r\n\r\n";
+  char read_buffer[512] = {0};
+  int readbytes = read(client, read_buffer, 512);
+  if (readbytes < 0)
+  {
+    cerr << "read failed\n";
+    return 1;
+  }
+  cout << "read" << readbytes << " bytes " << read_buffer << endl;
 
+  char temp[50] = {0};
+  for (int i = 0; i < 50; i++)
+  {
+    if (read_buffer[i] == '\r' && read_buffer[i + 1] == '\n')
+    {
+      break;
+    }
+    temp[i] = read_buffer[i];
+  }
+
+  string s;
+  if (strcmp(temp, "GET / HTTP/1.1"))
+  {
+    s = "HTTP/1.1 404 Not Found\r\n\r\n";
+  }
+  else
+    s = "HTTP/1.1 200 OK\r\n\r\n";
+
+  char write_buffer[512] = {0};
   strcpy(write_buffer, s.c_str());
   write(client, write_buffer, strlen(write_buffer));
 
