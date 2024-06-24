@@ -12,9 +12,50 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <zlib.h>
 using namespace std;
 
 string dir;
+
+std::string gzipCompress(const std::string &data)
+{
+  z_stream zs;
+  memset(&zs, 0, sizeof(zs));
+
+  if (deflateInit2(&zs, Z_BEST_COMPRESSION, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY) != Z_OK)
+  {
+    throw std::runtime_error("deflateInit2 failed");
+  }
+
+  zs.next_in = (Bytef *)data.data();
+  zs.avail_in = data.size();
+
+  int ret;
+  char buffer[1024];
+  std::string compressedData;
+
+  do
+  {
+    zs.next_out = reinterpret_cast<Bytef *>(buffer);
+    zs.avail_out = sizeof(buffer);
+
+    ret = deflate(&zs, Z_FINISH);
+
+    if (compressedData.size() < zs.total_out)
+    {
+      compressedData.append(buffer, zs.total_out - compressedData.size());
+    }
+  } while (ret == Z_OK);
+
+  deflateEnd(&zs);
+
+  if (ret != Z_STREAM_END)
+  {
+    throw std::runtime_error("deflate failed");
+  }
+
+  return compressedData;
+}
 
 vector<string> string_split(string &s, char delim, int len = 1)
 {
@@ -54,7 +95,7 @@ void handle_client(int client)
   {
     int len = tokens[2].length() - 5;
     s = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
-    if (requestparts.size() > 3)
+    if (requestparts.size() > 4)
     {
       auto it = find_if(requestparts.begin(), requestparts.end(), [](string s)
                         { return s.find("Accept-Encoding") != string::npos; });
@@ -68,10 +109,13 @@ void handle_client(int client)
         if (it != enc.end())
         {
           s += "Content-Encoding: gzip\r\n";
+          tokens[2] = gzipCompress(tokens[2].substr(0, len));
         }
       }
+      s += "Content-Length: " + to_string(tokens[2].size()) + "\r\n\r\n" + tokens[2];
     }
-    s += "Content-Length: " + to_string(len) + "\r\n\r\n" + tokens[2].substr(0, len);
+    else
+      s += "Content-Length: " + to_string(len) + "\r\n\r\n" + tokens[2].substr(0, len);
   }
   else if (tokens[1] == "files")
   {
@@ -113,9 +157,21 @@ void handle_client(int client)
   else
     s = "HTTP/1.1 404 Not Found\r\n\r\n";
 
-  char write_buffer[512] = {0};
-  strcpy(write_buffer, s.c_str());
-  write(client, write_buffer, strlen(write_buffer));
+  // char write_buffer[512] = {0};
+  // strcpy(write_buffer, s.c_str());
+  // write(client, write_buffer, strlen(write_buffer));
+  size_t totalsent = 0;
+  while (totalsent < s.size())
+  {
+    size_t sent = write(client, s.c_str() + totalsent, s.size() - totalsent);
+    if (sent < 0)
+    {
+      cerr << "write failed\n";
+      break;
+    }
+    totalsent += sent;
+  }
+  close(client);
 }
 
 int main(int argc, char **argv)
