@@ -11,6 +11,7 @@
 #include <thread>
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 using namespace std;
 
 string dir;
@@ -43,8 +44,8 @@ void handle_client(int client)
 
   string temp(read_buffer);
   vector<string> requestparts = string_split(temp, '\r', 2);
-  // for (string s : requestparts)
-  //   cout << "[" << s << "]";
+  for (string s : requestparts)
+    cout << "[" << s << "]";
   vector<string> tokens = string_split(requestparts[0], '/');
   string s;
   if (tokens[1] == " HTTP")
@@ -52,7 +53,25 @@ void handle_client(int client)
   else if (tokens[1] == "echo")
   {
     int len = tokens[2].length() - 5;
-    s = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + to_string(len) + "\r\n\r\n" + tokens[2].substr(0, len);
+    s = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n";
+    if (requestparts.size() > 3)
+    {
+      auto it = find_if(requestparts.begin(), requestparts.end(), [](string s)
+                        { return s.find("Accept-Encoding") != string::npos; });
+      if (it != requestparts.end())
+      {
+        int pos = distance(requestparts.begin(), it);
+        string temp = requestparts[pos].substr(pos + 2);
+        vector<string> enc = string_split(temp, ' ');
+        it = find_if(enc.begin(), enc.end(), [](string s)
+                     { return s.find("gzip") != string::npos; });
+        if (it != enc.end())
+        {
+          s += "Content-Encoding: gzip\r\n";
+        }
+      }
+    }
+    s += "Content-Length: " + to_string(len) + "\r\n\r\n" + tokens[2].substr(0, len);
   }
   else if (tokens[1] == "files")
   {
