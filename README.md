@@ -37,3 +37,7 @@ Note: This section is for stages 2 and beyond.
    `src/server.cpp`.
 1. Commit your changes and run `git push origin master` to submit your solution
    to CodeCrafters. Test output will be streamed to your terminal.
+
+# Stages
+![image](https://github.com/aar-rafi/codecrafters-http-server-cpp/assets/64215759/283a180a-87cd-462f-94f9-31a1dc64f28f)
+![image](https://github.com/aar-rafi/codecrafters-http-server-cpp/assets/64215759/41ddb772-9ee6-4952-a929-0742657e42ec)
