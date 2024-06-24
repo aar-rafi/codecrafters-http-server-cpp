@@ -10,7 +10,7 @@
 #include <vector>
 using namespace std;
 
-vector<string> string_split(string &s, char delim)
+vector<string> string_split(string &s, char delim, int len = 1)
 {
   vector<string> tokens;
   size_t start = 0;
@@ -18,7 +18,7 @@ vector<string> string_split(string &s, char delim)
   while (end != string::npos)
   {
     tokens.push_back(s.substr(start, end - start));
-    start = end + 1;
+    start = end + len;
     end = s.find(delim, start);
   }
   tokens.push_back(s.substr(start));
@@ -85,10 +85,11 @@ int main(int argc, char **argv)
     cerr << "read failed\n";
     return 1;
   }
-  cout << "read" << readbytes << " bytes " << read_buffer << endl;
+  cout << "read" << readbytes << " bytes " << endl;
 
   string temp(read_buffer);
-  vector<string> tokens = string_split(temp, '/');
+  vector<string> requestparts = string_split(temp, '\r', 2);
+  vector<string> tokens = string_split(requestparts[0], '/');
   string s;
   if (tokens[1] == " HTTP")
     s = "HTTP/1.1 200 OK\r\n\r\n";
@@ -96,6 +97,12 @@ int main(int argc, char **argv)
   {
     int len = tokens[2].length() - 5;
     s = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + to_string(len) + "\r\n\r\n" + tokens[2].substr(0, len);
+  }
+  else if (tokens[1] == "user-agent HTTP")
+  {
+    tokens.clear();
+    tokens = string_split(requestparts[requestparts.size() - 3], ' '); // last 2 are empty, +1 for 0 index
+    s = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + to_string(tokens[1].length()) + "\r\n\r\n" + tokens[1];
   }
   else
     s = "HTTP/1.1 404 Not Found\r\n\r\n";
@@ -105,6 +112,5 @@ int main(int argc, char **argv)
   write(client, write_buffer, strlen(write_buffer));
 
   close(server_fd);
-
   return 0;
 }
