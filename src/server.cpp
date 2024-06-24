@@ -9,7 +9,11 @@
 #include <netdb.h>
 #include <vector>
 #include <thread>
+#include <fstream>
+#include <sstream>
 using namespace std;
+
+string dir;
 
 vector<string> string_split(string &s, char delim, int len = 1)
 {
@@ -48,6 +52,21 @@ void handle_client(int client)
     int len = tokens[2].length() - 5;
     s = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + to_string(len) + "\r\n\r\n" + tokens[2].substr(0, len);
   }
+  else if (tokens[1] == "files")
+  {
+    tokens[2] = tokens[2].substr(0, tokens[2].length() - 5);
+    cout << dir + tokens[2] << endl;
+    ifstream file(dir + tokens[2]);
+    if (file.good())
+    {
+      stringstream ss;
+      ss << file.rdbuf();
+      string file_contents = ss.str();
+      s = "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: " + to_string(file_contents.size()) + "\r\n\r\n" + file_contents;
+    }
+    else
+      s = "HTTP/1.1 404 Not Found\r\n\r\n";
+  }
   else if (tokens[1] == "user-agent HTTP")
   {
     tokens.clear();
@@ -72,7 +91,13 @@ int main(int argc, char **argv)
   std::cout << "Logs from your program will appear here!\n";
 
   // Uncomment this block to pass the first stage
-  //
+  if (argc > 2)
+  {
+    if (strcmp(argv[1], "--directory") == 0)
+      dir = argv[2];
+    cout << argv[0] << " " << argv[1] << " " << argv[2] << endl;
+  }
+
   int server_fd = socket(AF_INET, SOCK_STREAM, 0);
   if (server_fd < 0)
   {
