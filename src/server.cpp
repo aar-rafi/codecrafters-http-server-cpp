@@ -110,9 +110,10 @@ void handle_client(int client)
         {
           s += "Content-Encoding: gzip\r\n";
           tokens[2] = gzipCompress(tokens[2].substr(0, len));
+          s += "Content-Length: " + to_string(tokens[2].size()) + "\r\n\r\n" + tokens[2];
         }
       }
-      s += "Content-Length: " + to_string(tokens[2].size()) + "\r\n\r\n" + tokens[2];
+      s += "Content-Length: " + to_string(len) + "\r\n\r\n" + tokens[2].substr(0, len);
     }
     else
       s += "Content-Length: " + to_string(len) + "\r\n\r\n" + tokens[2].substr(0, len);
