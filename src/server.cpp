@@ -43,6 +43,8 @@ void handle_client(int client)
 
   string temp(read_buffer);
   vector<string> requestparts = string_split(temp, '\r', 2);
+  // for (string s : requestparts)
+  //   cout << "[" << s << "]";
   vector<string> tokens = string_split(requestparts[0], '/');
   string s;
   if (tokens[1] == " HTTP")
@@ -55,17 +57,33 @@ void handle_client(int client)
   else if (tokens[1] == "files")
   {
     tokens[2] = tokens[2].substr(0, tokens[2].length() - 5);
-    cout << dir + tokens[2] << endl;
-    ifstream file(dir + tokens[2]);
-    if (file.good())
+    if (tokens[0] == "GET ")
     {
-      stringstream ss;
-      ss << file.rdbuf();
-      string file_contents = ss.str();
-      s = "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: " + to_string(file_contents.size()) + "\r\n\r\n" + file_contents;
+      cout << dir + tokens[2] << endl;
+      ifstream file(dir + tokens[2]);
+      if (file.good())
+      {
+        stringstream ss;
+        ss << file.rdbuf();
+        string file_contents = ss.str();
+        s = "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: " + to_string(file_contents.size()) + "\r\n\r\n" + file_contents;
+        file.close();
+      }
+      else
+        s = "HTTP/1.1 404 Not Found\r\n\r\n";
     }
-    else
-      s = "HTTP/1.1 404 Not Found\r\n\r\n";
+    else if (tokens[0] == "POST ")
+    {
+      ofstream file(dir + tokens[2]);
+      if (file.good())
+      {
+        file << requestparts[requestparts.size() - 1];
+        s = "HTTP/1.1 201 Created\r\n\r\n";
+        file.close();
+      }
+      else
+        s = "HTTP/1.1 404 Not Found\r\n\r\n";
+    }
   }
   else if (tokens[1] == "user-agent HTTP")
   {
